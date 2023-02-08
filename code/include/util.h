@@ -18,9 +18,9 @@
 #include <pthread.h>
 #include <climits>
 
-// #include "tools/atomic_queue/include/atomic_queue/atomic_queue.h"
+#include "tools/atomic_queue/include/atomic_queue/atomic_queue.h"
 #include "tools/persist.h"
-#include "tools/port_posix.h"
+// #include "tools/port_posix.h"
 #include "tools/timer.h"
 // #include "tools/zipfian_util.h"
 // #include "tools/zipfian.h"
@@ -58,29 +58,27 @@
 #define SHUFFLE_KEYS
 
 /**********************************宏开关**************************************/
-//【目前没有用 不要打开】
-// #define ZIPFIAN
+// 【目前没有用 不要打开】
+//  #define ZIPFIAN
 
 // 打开使用naive GC，关闭则使用不 naive GC
 // #define GC_NAIVE
 
 // #define GC_NAIVE_2
 
-//打开是统一结点大小：14个KV.
-// #define UNIFIED_NODE
 
-//重复key是否要插入。打开是true。【默认打开】
+// 重复key是否要插入。打开是true。【默认打开】
 #define INSERT_REPEAT_KEY
 
 // dptree的背景线程数是否固定（16）。打开是固定，关闭是等于前台线程数。【默认打开】
 inline int parallel_merge_worker_num = 16;
 // #define FIXED_BACKGROUND
 
-//是否测试peak log memory。打开会在每次gc结束后遍历vlog进行统计。
-// #define PERF_LOG_MEMORY
+// 是否测试peak log memory。打开会在每次gc结束后遍历vlog进行统计。
+//  #define PERF_LOG_MEMORY
 
-//是否统计flush的次数。打开后会用LRU链表模拟XPBuffer
-// #define FLUSH_COUNT
+// 是否统计flush的次数。打开后会用LRU链表模拟XPBuffer
+//  #define FLUSH_COUNT
 
 // eADR测试。打开后会取消clwb
 //  #define eADR_TEST
@@ -124,6 +122,13 @@ inline int parallel_merge_worker_num = 16;
 /**********************************只对lbtree tree有用*********************************/
 // #define DO_RECOVERY
 
+/**********************************只对sobtree有用*********************************/
+#define BACKGROUND
+// #define SPLIT_EVALUATION
+// #define SPLIT_BREAKDOWN
+
+// #define UNIFIED_NODE // 打开是统一结点大小：14个KV. 不打开比较对象使用自己论文里的默认大小。
+
 /*****************************************************global variable**********************************/
 
 inline __thread int thread_id;
@@ -150,7 +155,7 @@ inline uint64_t count_conflict_in_bnode[100];
 inline uint64_t free_bnode[100];
 inline uint64_t create_bnode[100];
 
-//每个线程的require请求数量，用于热点检测
+// 每个线程的require请求数量，用于热点检测
 inline uint64_t count_access[2][100];
 
 // dram空间
@@ -167,25 +172,25 @@ inline int mmax_length_for_scan = 100 + 64;
 
 #ifdef PERF_GC
 
-//采样次数
+// 采样次数
 #define GC_RECORD_CNT 1000
-//间隔（us)
+// 间隔（us)
 #define GC_RECORD_INTERVAL 100000
 
 // global
-inline volatile uint64_t global_time_record; //采样次数
+inline volatile uint64_t global_time_record; // 采样次数
 inline bool is_gc[GC_RECORD_CNT + 1];		 // is_gc[i]  这次采样时是否在做gc
 inline int gc_record_idx;					 // gc record的下标
 inline uint64_t gc_record[100];				 // gc时的global_time_record
 
 // for thread
 inline __thread uint64_t thread_time_record;
-inline int64_t thread_ops_count[50][GC_RECORD_CNT + 1]; //线程数 取样次数
+inline int64_t thread_ops_count[50][GC_RECORD_CNT + 1]; // 线程数 取样次数
 
 #endif
 
 /*****************************************************global variable**********************************/
-#define MEMPOOL //为了避免PMDK会在头部添加16字节元数据的问题，采用自定义的mempool
+// #define MEMPOOL //为了避免PMDK会在头部添加16字节元数据的问题，采用自定义的mempool
 #ifdef MEMPOOL
 #include "tools/mempool.h"
 
@@ -226,24 +231,10 @@ inline void openPmemobjPool(char *pathname, uint64_t size, int num_theads)
 	}
 #else
 
-#ifdef DPTREE //有背景线程的话，背景线程也需要分池子
-
-#ifndef FIXED_BACKGROUND
-	the_thread_nvmpools.init(num_theads + 1 + num_theads, pathname, size); // dptree有背景线程回收，背景线程要与前台分开。
-#else
-	printf("parallel_merge_worker_num = %d\n", parallel_merge_worker_num);
-	the_thread_nvmpools.init(num_theads + 1 + parallel_merge_worker_num, pathname, size); // dptree有背景线程回收，背景线程要与前台分开。
-#endif
-#else
 	the_thread_nvmpools.init(num_theads + 1, pathname, size); // main thread and background thread(our tree) occupied the last pool.
-#endif
+
 #endif
 }
-
-// #define PREFETCH
-// #define SPLIT_EVALUATION
-// #define BACKGROUND
-// #define SPLIT_BREAKDOWN
 
 #define ABORT_INODE 5
 #define ABORT_BNODE 6
@@ -264,7 +255,7 @@ inline void *pmem_malloc(uint32_t size)
 }
 
 inline free_log_chunks_t global_log_chunks; // global
-inline vlog_group_t *vlog_groups[100];		//每个线程一个
+inline vlog_group_t *vlog_groups[100];		// 每个线程一个
 inline log_group_t *log_groups[100];
 inline uint32_t log_file_cnt = 0;
 
@@ -294,20 +285,21 @@ inline void log_init()
 
 inline uint64_t total_lnode();
 
-inline int get_log_file_cnt(){
+inline int get_log_file_cnt()
+{
 	return log_file_cnt;
 }
 
 inline bool if_log_recycle()
 {
-	//统计log总大小。目前用的是log entry为粒度的空间，而不是以chunk为粒度的。
-	// uint64_t tot_size = 0;
-	// for (int i = 0; i <= num_threads; i++)
-	// {
-	// 	vlog_t *vlog = &(vlog_groups[i]->vlog[vlog_groups[i]->alt]);
-	// 	if (vlog->tot_size > 0)
-	// 		tot_size += (vlog->tot_size - LOG_CHUNK_SIZE) + vlog->entry_cnt * LOG_ENTRY_SIZE;
-	// }
+	// 统计log总大小。目前用的是log entry为粒度的空间，而不是以chunk为粒度的。
+	//  uint64_t tot_size = 0;
+	//  for (int i = 0; i <= num_threads; i++)
+	//  {
+	//  	vlog_t *vlog = &(vlog_groups[i]->vlog[vlog_groups[i]->alt]);
+	//  	if (vlog->tot_size > 0)
+	//  		tot_size += (vlog->tot_size - LOG_CHUNK_SIZE) + vlog->entry_cnt * LOG_ENTRY_SIZE;
+	//  }
 
 	uint64_t tot_size = get_log_totsize();
 
@@ -324,48 +316,6 @@ inline bool if_log_recycle()
 }
 
 #endif
-
-/********************************get pmem space**********************************************/
-inline uint64_t freed_nvm_space;
-inline uint64_t getNVMusage()
-{
-	// printf("1111\n");
-	return (the_thread_nvmpools.print_usage() - freed_nvm_space);
-}
-
-/********************************get dram space*********************************************/
-inline uint64_t ini_dram_space;
-
-inline uint64_t getRSS()
-{
-	FILE *fstats = fopen("/proc/self/statm", "r");
-	// the file contains 7 data:
-	// vmsize vmrss shared text lib data dt
-
-	size_t buffsz = 0x1000;
-	char buff[buffsz];
-	buff[buffsz - 1] = 0;
-	fread(buff, 1, buffsz - 1, fstats);
-	fclose(fstats);
-	const char *pos = buff;
-
-	// get "vmrss"
-	while (*pos && *pos == ' ')
-		++pos;
-	while (*pos && *pos != ' ')
-		++pos;
-	uint64_t rss = atol(pos);
-
-	// get "shared"
-	while (*pos && *pos == ' ')
-		++pos;
-	while (*pos && *pos != ' ')
-		++pos;
-	uint64_t shared = atol(pos);
-	// ull shared = 0;
-	//	return rss*4*1024;
-	return (rss - shared) * 4 * 1024; // B
-}
 
 inline void check_defines()
 {
@@ -511,10 +461,6 @@ inline void init_global_variable()
 
 	log_init(); ////////////////
 
-	ini_dram_space = getRSS(); //初始空间
-	printf("dram space after init_global_variable: %fMB\n", ini_dram_space / 1024.0 / 1024);
-
-	freed_nvm_space = 0;
 	dram_space = 0;
 
 #ifdef LATENCY_TEST
@@ -746,8 +692,8 @@ inline void perf_gc()
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #define CAS(addr, old_value, new_value) __sync_bool_compare_and_swap(addr, old_value, new_value)
 
-#define setbit(x, y) x |= (1 << y)	//将X的第Y位置1
-#define clrbit(x, y) x &= ~(1 << y) //将X的第Y位清0
+#define setbit(x, y) x |= (1 << y)	// 将X的第Y位置1
+#define clrbit(x, y) x &= ~(1 << y) // 将X的第Y位清0
 
 #ifdef FPTREE
 // utils for multi-fptree

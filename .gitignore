@@ -285,7 +285,7 @@ TSWLatexianTemp*
 
 code/perf.data
 code/perf.data.old
-code/mybin/*
+# code/mybin/*
 code/*.out
 code/old-nohup/*
 .vscode/*

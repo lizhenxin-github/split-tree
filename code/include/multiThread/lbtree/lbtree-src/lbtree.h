@@ -10,7 +10,7 @@
  * @section DESCRIPTION
  *
  *
- * The class implements the LB+-Tree. 
+ * The class implements the LB+-Tree.
  *
  * Non-leaf nodes are in DRAM.  They are normal B+-Tree nodes.
  * Leaf nodes are in NVM.
@@ -45,7 +45,7 @@ POBJ_LAYOUT_END(lbtree);
 #ifndef UNIFIED_NODE
 #define NON_LEAF_KEY_NUM (NONLEAF_SIZE / (KEY_SIZE + POINTER_SIZE) - 1)
 #else
-#define NON_LEAF_KEY_NUM 14 //node size
+#define NON_LEAF_KEY_NUM 14 // node size
 #endif
 
 /* In a leaf, there are 16B header, 14x16B entries, 2x8B sibling pointers.
@@ -53,7 +53,6 @@ POBJ_LAYOUT_END(lbtree);
 #if LEAF_SIZE != 256
 #error "LB+-Tree requires leaf node size to be 256B."
 #endif
-
 
 #define LEAF_KEY_NUM (14)
 #define OPEN_RTM
@@ -229,7 +228,7 @@ public:
         //     setFirstLeaf(NULL);
 
         root_level = 0;
-        first_leaf = (bleaf **) nvmpool_alloc(sizeof(bleaf *));
+        first_leaf = (bleaf **)malloc(sizeof(bleaf *));
         tree_root = nvm_address;
         setFirstLeaf(tree_root);
     }
@@ -276,24 +275,6 @@ private:
     // sort pos[start] ... pos[end] (inclusively)
     void qsortBleaf(bleaf *p, int start, int end, int pos[]);
 
-    int recovery_bulkloadSubtree(
-                                bleaf *firstleaf, int start_key, int num_key, 
-                                float bfill, int target_level,
-                                Pointer8B pfirst[], int n_nodes[]) ;
-
-    void recovery_getKeyPtrLevel(
-                                Pointer8B pnode, int pnode_level, key_type left_key,
-                                int target_level, Pointer8B ptrs[], key_type keys[], int &num_nodes,
-                                bool free_above_level_nodes);
-
-    int recovery_bulkloadToptree(
-                                Pointer8B ptrs[], key_type keys[], int num_key,
-                                float bfill, int cur_level, int target_level,
-                                Pointer8B pfirst[], int n_nodes[]);
-
-    int recovery_load(int leafnum, bleaf *firstleaf, float bfill, int worker_thread_num);
-
-
 public:
     // bulkload a tree and return the root level
     // use multiple threads to do the bulkloading
@@ -325,7 +306,7 @@ public:
     int scan(key_type minkey, uint64_t len, std::vector<value_type_sob> &buf);
 
     // 恢复
-    void recovery(bleaf * firstleaf, int worker_thread_num);  //参数：叶子起始地址
+    void recovery(bleaf *firstleaf, int worker_thread_num); // 参数：叶子起始地址
 
 private:
     void print(Pointer8B pnode, int level);

@@ -291,49 +291,6 @@ void RunYCSBBench(DataSet *load_data, DataSet *run_data, int load_thread_num, in
     }
     printf("create bnode = %llu, free bnode = %llu.\n", total_create_bnode(), total_free_bnode());
 
-#ifdef TREE
-    while (!CAS(&signal_do_recycle, false, true))
-    {
-    };
-    while (signal_do_recycle == true)
-    {
-    };
-    printf("log recycle for load phase! begin recycle\n");
-#endif
-
-
-#ifdef TREEFF
-    while (!CAS(&signal_do_recycle, false, true))
-    {
-    };
-    while (signal_do_recycle == true)
-    {
-    };
-    printf("log recycle for load phase! begin recycle\n");
-#endif
-
-#ifdef DPTREE
-    printf("wait for background..\n");
-    while (bt->is_merging())
-        ;
-#endif
-
-#ifdef PERF_LOG_MEMORY
-    printf("peak log memory = %f MB\n", peak_log_memory / 1024.0 / 1024);
-    printf("peak node memory = %f MB\n", peak_lnode_memory / 1024.0 / 1024);
-    printf("end node memory = %f MB\n", total_lnode() * 256 / 1024.0 / 1024);
-    printf("nvm log file need = %d\n", log_file_cnt);
-#endif
-
-    //空间开销统计
-    printf("nvm space = %fMB\n", getNVMusage() / 1024.0 / 1024);
-    // printf("nowRSS=%fMB  iniRSS=%fMB\n", getRSS()/1024.0/1024, ini_dram_space/1024.0/1024);
-    printf("dram space (RSS) = %fMB\n", (getRSS() - ini_dram_space) / 1024.0 / 1024);
-
-#ifdef DRAM_SPACE_TEST
-    printf("dram space (non_lnode_space) = %fMB\n", dram_space / 1024.0 / 1024);
-#endif
-    printf("create bnode = %llu, free bnode = %llu.\n", total_create_bnode(), total_free_bnode());
 
     printf("load phast end !*******************\n");
 
@@ -382,23 +339,6 @@ void RunYCSBBench(DataSet *load_data, DataSet *run_data, int load_thread_num, in
     //     delete run_set[i];
     // }
 
-#ifdef TREE
-    signal_run_bgthread = false;
-    bg_thread.get();
-#endif
-
-#ifdef DPTREE
-    printf("wait for background..\n");
-    while (bt->is_merging())
-        ;
-#endif
-
-
-#ifdef TREEFF
-    signal_run_bgthread = false;
-    bg_thread.get();
-#endif
-
 #ifdef SPLIT_EVALUATION
     for (uint64_t tid = 0; tid < run_thread_num; tid++)
     {
@@ -411,23 +351,6 @@ void RunYCSBBench(DataSet *load_data, DataSet *run_data, int load_thread_num, in
     }
 #endif
 
-#ifdef PERF_LOG_MEMORY
-    printf("peak log memory = %f MB\n", peak_log_memory / 1024.0 / 1024);
-    printf("peak node memory = %f MB\n", peak_lnode_memory / 1024.0 / 1024);
-    printf("end node memory = %f MB\n", total_lnode() * 256 / 1024.0 / 1024);
-    printf("nvm log file need = %d\n", log_file_cnt);
-#endif
-
-    //空间开销统计
-    printf("nvm space = %fMB\n", getNVMusage() / 1024.0 / 1024);
-    // printf("nowRSS=%fMB  iniRSS=%fMB\n", getRSS()/1024.0/1024, ini_dram_space/1024.0/1024);
-    printf("dram space (RSS) = %fMB\n", (getRSS() - ini_dram_space) / 1024.0 / 1024);
-
-#ifdef DRAM_SPACE_TEST
-    printf("dram space (non_lnode_space) = %fMB\n", dram_space / 1024.0 / 1024);
-#endif
-
-    printf("create bnode = %llu, free bnode = %llu.\n", total_create_bnode(), total_free_bnode());
 }
 
 int main(int argc, char const *argv[])
@@ -444,19 +367,12 @@ int main(int argc, char const *argv[])
 
     /************************************ global variable*************************************/
     init_global_variable();
-#ifndef NUMA_TEST
-    openPmemobjPool("/mnt/pmem/sobtree/leafdata", 40ULL * 1024ULL * 1024ULL * 1024ULL, num_threads); //单节点
-#else
-    // numa 多节点
-    openPmemobjPool("/mnt/pmem/sobtree/leafdata", "/pmem/sobtree/leafdata", 40ULL * 1024ULL * 1024ULL * 1024ULL);
-#endif
+
+    openPmemobjPool("/mnt/pmem/sobtree/leafdata", 40ULL * 1024ULL * 1024ULL * 1024ULL, num_threads); // 单节点
+
     tree_init();
 
     RunYCSBBench(load_data, run_data, num_threads, num_threads);
-
-#ifdef DPTREE
-    tree_end();
-#endif
 
     return 0;
 }

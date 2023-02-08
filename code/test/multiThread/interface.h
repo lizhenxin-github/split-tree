@@ -298,7 +298,7 @@ inline lbtree *tree_recovery(int num_threads)
 
 // #elif 1
 #elif defined(SOBTREE)
-#include "sobtree_v6.h"
+#include "sobtree_v2.h"
 tree *bt;
 
 inline void tree_init()
@@ -339,12 +339,13 @@ inline void tree_update(key_type_sob key)
 {
     bt->insert_lnode(key, key); // todo:
 };
-inline void tree_delete(key_type_sob key){
-    // bt->del(key);  //todo
+inline void tree_delete(key_type_sob key)
+{
+    assert("Delete op is not achievement!"); //可以仿照lbtree
 };
 inline void tree_scan(key_type_sob min_key, uint64_t length, std::vector<value_type_sob> &buf)
 {
-    bt->scan(min_key, length, buf);
+    assert("Scan op is not achievement!"); //可以仿照lbtree
 };
 // #elif 1
 #elif defined(MPSKIPLIST)
@@ -758,7 +759,7 @@ inline void tree_delete(key_type_sob key)
 
 inline void tree_scan(key_type_sob min_key, uint64_t length, std::vector<value_type_sob> &buf)
 {
-    int res = tree->btree_search_range(min_key, length, buf); 
+    int res = tree->btree_search_range(min_key, length, buf);
 
     std::sort(buf.begin(), buf.end());
     // for (int i = 0; i < res; i++)
@@ -786,8 +787,8 @@ inline void tree_recycle()
 #elif defined(PACTREE)
 
 #include "pactree_wrapper.h"
-pactree_wrapper * pt_wrapper;
-thread_local key_type_sob global_key_ptr;  //TODO:改成thread local
+pactree_wrapper *pt_wrapper;
+thread_local key_type_sob global_key_ptr; // TODO:改成thread local
 thread_local value_type_sob global_value_ptr;
 
 inline void tree_init()
@@ -795,10 +796,9 @@ inline void tree_init()
     printf("init for multi-threads pactree!\n");
     // pt_wrapper = new pactree_wrapper();
     tree_options_t tree_opt;
-    tree_opt.pool_path = "/pmem/sobtree/";  // node 0
+    tree_opt.pool_path = "/pmem/sobtree/"; // node 0
     pt_wrapper = reinterpret_cast<pactree_wrapper *>(create_tree(tree_opt));
 };
-
 
 inline void tree_end()
 {
@@ -809,42 +809,41 @@ inline void tree_insert(key_type_sob key)
 {
     global_key_ptr = key;
     global_value_ptr = key;
-    pt_wrapper->insert(reinterpret_cast<char*>(&global_key_ptr), 8, reinterpret_cast<char*>(&global_value_ptr), 8);
+    pt_wrapper->insert(reinterpret_cast<char *>(&global_key_ptr), 8, reinterpret_cast<char *>(&global_value_ptr), 8);
 };
 
 inline void tree_search(key_type_sob key)
 {
     global_key_ptr = key;
-    pt_wrapper->find(reinterpret_cast<char*>(&global_key_ptr), 8, reinterpret_cast<char*>(&global_value_ptr));
+    pt_wrapper->find(reinterpret_cast<char *>(&global_key_ptr), 8, reinterpret_cast<char *>(&global_value_ptr));
 };
 
 inline void tree_update(key_type_sob key)
 {
     global_key_ptr = key;
     global_value_ptr = key;
-    pt_wrapper->update(reinterpret_cast<char*>(&global_key_ptr), 8, reinterpret_cast<char*>(&global_value_ptr), 8);
+    pt_wrapper->update(reinterpret_cast<char *>(&global_key_ptr), 8, reinterpret_cast<char *>(&global_value_ptr), 8);
 };
 
 inline void tree_delete(key_type_sob key)
 {
     global_key_ptr = key;
-    pt_wrapper->remove(reinterpret_cast<char*>(&global_key_ptr), 8);
+    pt_wrapper->remove(reinterpret_cast<char *>(&global_key_ptr), 8);
 };
 
 inline void tree_scan(key_type_sob min_key, uint64_t length, std::vector<value_type_sob> &buf)
 {
     global_key_ptr = min_key;
     // std::vector<char *> buf2;
-    char * buf2;
-    pt_wrapper->scan(reinterpret_cast<char*>(&global_key_ptr), 8, length, buf2);
+    char *buf2;
+    pt_wrapper->scan(reinterpret_cast<char *>(&global_key_ptr), 8, length, buf2);
 
     // sort in pactree_wrapper.cpp
 };
 
-inline void tree_get_memory_footprint()  // only for pactree
+inline void tree_get_memory_footprint() // only for pactree
 {
     pt_wrapper->get_memory_footprint();
 };
 
 #endif
-

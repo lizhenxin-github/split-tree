@@ -83,7 +83,7 @@ public:
 };
 
 #ifdef BACKGROUND
-#define NUM_WORKERS 5
+#define NUM_WORKERS 8
 uint64_t CAPACITY = 1024ULL * 1024ULL * 1024ULL; // Queue capacity. Since there are more consumers than producers this doesn't have to be large
 // using Queue = atomic_queue::AtomicQueueB<Element, std::allocator<Element>, NIL>; // Use heap-allocated buffer.
 using Queue = atomic_queue::AtomicQueueB2<jobinfo, std::allocator<jobinfo>, true, false, false>;

@@ -59,12 +59,7 @@ int main(int argc, char **argv)
 
 
     /************************************ global variable*************************************/
-#ifndef NUMA_TEST
     openPmemobjPool("/mnt/pmem/sobtree/leafdata", 40ULL * 1024ULL * 1024ULL * 1024ULL, num_threads); //单节点
-#else
-    // numa 多节点
-    openPmemobjPool("/mnt/pmem/sobtree/leafdata", "/pmem/sobtree/leafdata", 40ULL * 1024ULL * 1024ULL * 1024ULL);
-#endif
 
     tree_init();
 
@@ -125,12 +120,6 @@ int main(int argc, char **argv)
 
 #endif
 
-#ifdef DPTREE
-    printf("wait for background..\n");
-    while (bt->is_merging())
-        ;
-#endif
-
 #ifdef FLUSH_COUNT
     not_warmup = true;
 #endif
@@ -139,15 +128,6 @@ int main(int argc, char **argv)
 
     clear_cache();
     futures.clear();
-
-#ifdef FLUSH_COUNT_USE_IPMCTL
-    // _mm_mfence();
-    // system("sudo ipmctl show -dimm 0x0010,0x0110,0x0210,0x0310 -performance");
-    // _mm_mfence();
-    // printf("在另一个命令行窗口第一次运行：sudo ipmctl show -dimm 0x0010,0x0110,0x0210,0x0310 -performance\n"); //numa 0
-    printf("在另一个命令行窗口第一次运行：sudo ipmctl show -dimm 0x1010,0x1110,0x1210,0x1310 -performance\n"); // numa 1
-    char tep_char = getchar();
-#endif
 
     time_start = NowNanos();
 
@@ -200,76 +180,10 @@ int main(int argc, char **argv)
         if (f.valid())
             f.get();
     printf("%d threads zipfian time cost is %llu ns. error_count = %lld\n", num_threads, ElapsedNanos(time_start), total_error_insert() + total_error_search());
-    // printf("count flush :%d\n", count_flush);
 
-    printf("conflict_in_bnode = %lld\n", total_conflict_in_bnode());
-#ifdef TREE
-    while (!CAS(&signal_do_recycle, false, true))
-    {
-    };
-    while (signal_do_recycle == true)
-    {
-    };
-    printf("log recycle for insert! begin recycle\n");
-#endif
-
-#ifdef DPTREE
-    printf("wait for background..\n");
-    while (bt->is_merging())
-        ;
-#endif
 
     free(keys_insert);
     free(keys_search);
-    /*****************printf some information***********************/
-
-#ifdef FLUSH_COUNT
-    // fclose(file_fc);
-    flush_count_process();
-    printf("count_flush = %llu   count_flush_256 = %llu\n", count_flush, count_flush_256);
-    // printf("count_flush_log = %llu   count_flush_tree = %llu\n", count_flush_log, count_flush_tree);
-#endif
-
-#ifdef FLUSH_COUNT_USE_IPMCTL
-    _mm_mfence();
-    // system("sudo ipmctl show -dimm 0x0010,0x0110,0x0210,0x0310 -performance"); //numa 0
-    system("sudo ipmctl show -dimm 0x1010,0x1110,0x1210,0x1310 -performance");
-    _mm_mfence();
-#endif
-
-    // printf("count in dram = %llu.\n", count_search_in_dram[0]);
-    // bt->printinfo_bnode();
-    printf("\n");
-    // bt->printinfo_leaf();
-    // printf("\n");
-    // time_start = NowNanos();
-    // bt->recycle_bottom();
-    // uint64_t ll = ElapsedNanos(time_start);
-    // bt->printinfo_leaf();
-    // bt->printinfo_bnode();
-    printf("\n");
-    // bt->printinfo_leaf();
-    // printf("\n");
-    fence();
-    // fprintf(stderr, "%d threads mixed time cost is %llu\n", num_threads, ll);
-    // printf("\n************\n");
-    fence();
-    // bt->printinfo();
-
-#ifdef TREE
-    signal_run_bgthread = false;
-    bg_thread.get();
-#endif
-
-#ifdef DPTREE
-    tree_end();
-#endif
-#ifdef TREEFF
-#ifndef TREE_NO_GC
-    signal_run_bgthread = false;
-    bg_thread.get();
-#endif
-#endif
 
     return 0;
 }

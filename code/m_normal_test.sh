@@ -1,6 +1,6 @@
 #!/bin/bash
 
-num_keys=100000000
+num_keys=1000000
 # num_keys=$2
 rm -rf /mnt/pmem/sobtree/*
 rm -rf ./mybin/*
@@ -13,10 +13,8 @@ CXXFLAG="-lpmem -lpmemobj  -mclwb -lpthread -mrtm -msse4.1 -mavx2 -mavx512f -mav
 # CPPPATH="include/tools/mempool.c include/tools/minilog.c"  #v7
 CPPPATH="include/tools/mempool.c include/tools/minilog.c include/tools/log.cpp"  #v8
 
-threads=(47)
+threads=(8 16 24 32)
 defines="-DDO_DELETE -DDO_UPDATE -DDO_SEARCH -DDO_SCAN"
-defines=$defines" -DUNIFIED_NODE" #是否统一node大小，打开的话就是node全部只能存16个node.
-
 echo $defines
 
 if [ $1 = "lbtree" ] || [ $1 = "all" ]; then
@@ -25,7 +23,7 @@ g++ -I include/multiThread/lbtree/lbtree-src -I include/multiThread/lbtree/commo
 wait
 for num_threads in ${threads[@]} 
 do
-numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_lbtree $num_keys $num_threads $ssize
+numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_lbtree $num_keys $num_threads 
 wait
 rm -rf /mnt/pmem/sobtree/leafdata
 wait
@@ -39,7 +37,7 @@ g++ -I include/multiThread/fast_fair -I include $defines -DFASTFAIR -O3 -g $CDEB
 wait
 for num_threads in ${threads[@]} 
 do
-numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_fastfair $num_keys $num_threads $ssize
+numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_fastfair $num_keys $num_threads 
 wait
 rm -rf /mnt/pmem/sobtree/leafdata
 wait
@@ -52,7 +50,7 @@ g++ -I include/multiThread/fptree -I include $defines -DFPTREE -O3 -g $CDEBUG  -
 wait
 for num_threads in ${threads[@]} 
 do
-numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_fptree $num_keys $num_threads $ssize
+numactl --membind=1 --cpunodebind=1 ./mybin/m_normal_test_fptree $num_keys $num_threads 
 wait
 rm -rf /mnt/pmem/sobtree/leafdata
 wait

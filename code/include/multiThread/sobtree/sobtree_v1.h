@@ -48,7 +48,7 @@ void sfence()
 }
 
 #ifdef BACKGROUND
-#define NUM_WORKERS 5
+#define NUM_WORKERS 8
 uint64_t CAPACITY = 1ULL * 1024ULL * 1024ULL;                                    // Queue capacity. Since there are more consumers than producers this doesn't have to be large
 using Element = uint64_t;                                                        // Queue element type.
 Element constexpr NIL = static_cast<Element>(0);                                 // Atomic elements require a special value that cannot be pushed/popped.
