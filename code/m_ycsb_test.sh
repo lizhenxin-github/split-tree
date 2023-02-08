@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ycsb 的负载需要自己生成，现在只在紫金港服务器上生成了，其他服务器需要自己生成。
+
 rm -rf /mnt/pmem/sobtree/*
 rm -rf ./mybin/*
 wait
